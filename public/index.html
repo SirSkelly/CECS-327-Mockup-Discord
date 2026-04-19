@@ -1,0 +1,53 @@
+<!-- public/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Chat</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="chat-container">
+        <!-- Login Panel -->
+        <div id="login-panel" class="panel">
+            <h2>Welcome to Chat</h2>
+            <input type="text" id="username-input" placeholder="Enter your username" maxlength="20">
+            <button id="set-username-btn">Set Username</button>
+        </div>
+
+        <!-- Room Selection Panel -->
+        <div id="room-panel" class="panel hidden">
+            <h2>Join Room</h2>
+            <input type="text" id="room-input-name" placeholder="Enter room name" maxlength="30">
+            <input type="text" id="room-input-code" placeholder="Enter room code" maxlength="30">
+            <button id="join-room-btn">Enter</button>
+            <div id="available-rooms"></div>
+        </div>
+
+        <!-- Chat Panel -->
+        <div id="chat-panel" class="panel hidden">
+            <div class="chat-header">
+                <span id="room-name">Room Name</span>
+                <button id="leave-room-btn">Leave Room</button>
+            </div>
+
+            <div id="users-list"></div>
+
+            <div id="messages-container"></div>
+
+            <div id="typing-indicator" class="hidden"></div>
+
+            <div class="message-input-container hidden-input">
+                <input type="text" id="message-input" placeholder="Type a message..." maxlength="1000">
+                <button id="send-btn">Send</button>
+            </div>
+        </div>
+
+        <!-- Connection Status -->
+        <div id="connection-status">Connecting...</div>
+    </div>
+
+    <script src="chat.js"></script>
+</body>
+</html>
