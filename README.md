@@ -6,6 +6,11 @@ Make sure to run `npm install` to get all depedencies once you have node.js .
 
 # Deployment:
 
-Run with `node server.js` and visit http://localhost:3000/. 
+In a terminal, run `node load-balancer.js`.
 
-You can visit this url with multiple tabs to simulate multiple users.
+In another terminal, run `node server.js` for a server on port 3000.
+
+In another terminal, run `PORT=3001 node server.js` for another server on port 3001.
+
+
+You can visit `localhost:8080` with multiple tabs to simulate multiple users.
