@@ -4,6 +4,7 @@ const http = require('http');
 const WebSocket = require('ws');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
+const { initRedisAdapter, publishMessage } = require('./redis-adapter');
 
 const app = express();
 const server = http.createServer(app);
@@ -18,6 +19,7 @@ const messageHistory = [];
 const ROOM_NAME = 'global';
 const ROOM_PASSWORD = '123'; // prob use a .env file instead
 rooms.set(ROOM_NAME, new Set());
+const SERVER_ID = uuidv4();
 
 
 // Message types
@@ -134,8 +136,6 @@ function joinRoom(ws, client, roomName, password) {
     if (roomName !== ROOM_NAME) return sendError(ws, 'Room not found');
     if (password !== ROOM_PASSWORD) return sendError(ws, 'Password incorrect');
 
-    // if (!rooms.has(roomName)) rooms.set(roomName, new Set());
-    
     rooms.get(roomName).add(ws);
     client.currentRoom = roomName;
 
@@ -147,23 +147,41 @@ function joinRoom(ws, client, roomName, password) {
     const users = getUsersInRoom(roomName);
     ws.send(JSON.stringify({ type: MSG.ROOM_USERS, users }));
 
-    broadcastToRoom(roomName, {
+    const joinEvent = {
         type: MSG.USER_JOINED,
         username: client.username,
         userId: client.id
-    }, ws);
+    };
 
+    broadcastToRoom(roomName, joinEvent, ws);
+    publishMessage(SERVER_ID, roomName, joinEvent);
 }
 
-function leaveRoom(ws, client) {
+function leaveRoom(ws, client, options = { notifyClient: true, publish: true }) {
     if (!client.currentRoom) return;
 
     const roomName = client.currentRoom;
     const room = rooms.get(roomName);
+    if (room) {
+        room.delete(ws);
+    }
 
+    if (options.notifyClient && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: MSG.ROOM_LEFT, room: roomName }));
+    }
 
-    ws.send(JSON.stringify({ type: MSG.ROOM_LEFT, room: roomName }));
     client.currentRoom = null;
+
+    const leaveEvent = {
+        type: MSG.USER_LEFT,
+        username: client.username,
+        userId: client.id
+    };
+
+    broadcastToRoom(roomName, leaveEvent, ws);
+    if (options.publish) {
+        publishMessage(SERVER_ID, roomName, leaveEvent);
+    }
 }
 
 function chatMessage(ws, client, content) {
@@ -186,6 +204,7 @@ function chatMessage(ws, client, content) {
     if (messageHistory.length > 1000) messageHistory.shift();
 
     broadcastToRoom(client.currentRoom, message);
+    publishMessage(SERVER_ID, client.currentRoom, message);
 }
 
 function privateMessage(ws, client, targetId, content) {
@@ -224,18 +243,22 @@ function setTyping(ws, client, isTyping) {
     if (!client.username || !client.currentRoom) return;
 
     client.isTyping = isTyping;
-    broadcastToRoom(client.currentRoom, {
+
+    const payload = {
         type: MSG.TYPING_INDICATOR,
         userId: client.id,
         username: client.username,
         isTyping
-    }, ws);
+    };
+
+    broadcastToRoom(client.currentRoom, payload, ws);
+    publishMessage(SERVER_ID, client.currentRoom, payload);
 }
 
 function handleDisconnect(ws) {
     const client = clients.get(ws);
     if (client && client.currentRoom) {
-        leaveRoom(ws, client);
+        leaveRoom(ws, client, { notifyClient: false, publish: true });
     }
     clients.delete(ws);
 }
@@ -261,6 +284,8 @@ function broadcastToRoom(roomName, message, excludeWs = null) {
         }
     }
 }
+
+initRedisAdapter(SERVER_ID, broadcastToRoom);
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

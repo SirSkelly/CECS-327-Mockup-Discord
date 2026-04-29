@@ -11,6 +11,7 @@
   "description": "",
   "dependencies": {
     "express": "^5.2.1",
+    "ioredis": "^5.10.1",
     "uuid": "^13.0.0",
     "ws": "^8.20.0"
   }
